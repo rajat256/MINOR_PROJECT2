@@ -63,9 +63,29 @@ const login = async (req, res) => {
             return res.status(400).json({ message: "Please provide email and password" });
         }
 
-        const user = await User.findOne({ email });
-        if (!user || !(await user.comparePassword(password))) {
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const normalizedPassword = String(password);
+        const user = await User.findOne({ email: normalizedEmail });
+
+        if (!user) {
             return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+        let isPasswordValid = await user.comparePassword(normalizedPassword);
+
+        // Backward compatibility: migrate legacy plaintext passwords to bcrypt on successful login.
+        if (!isPasswordValid && user.password === normalizedPassword) {
+            user.password = normalizedPassword;
+            await user.save();
+            isPasswordValid = true;
+        }
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+        if (user.isActive === false) {
+            return res.status(403).json({ message: "Your account is deactivated. Contact support." });
         }
 
         res.json({
