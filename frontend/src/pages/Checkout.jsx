@@ -38,6 +38,7 @@ const Checkout = () => {
     landmark: "",
     type: "Home"
   });
+  const [addressErrors, setAddressErrors] = useState({});
 
   const [geoLoading, setGeoLoading] = useState(false);
 
@@ -126,6 +127,47 @@ const Checkout = () => {
     return parts.length ? parts.join(", ") : "Address not set yet";
   };
 
+  const validateAddress = (values) => {
+    const errors = {};
+    const requiredFields = ["name", "phone", "pincode", "locality", "fullAddress", "city", "state"];
+
+    requiredFields.forEach((field) => {
+      if (!String(values[field] || "").trim()) {
+        errors[field] = "This field is required";
+      }
+    });
+
+    if (!errors.phone && !/^\d{10}$/.test(String(values.phone).trim())) {
+      errors.phone = "Enter a valid 10-digit mobile number";
+    }
+
+    if (!errors.pincode && !/^\d{6}$/.test(String(values.pincode).trim())) {
+      errors.pincode = "Enter a valid 6-digit pincode";
+    }
+
+    return errors;
+  };
+
+  const handleAddressChange = (field, value) => {
+    setAddress((prev) => ({ ...prev, [field]: value }));
+    setAddressErrors((prev) => {
+      if (!prev[field]) return prev;
+      const nextErrors = { ...prev };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+  };
+
+  const handleContinueFromAddress = () => {
+    const errors = validateAddress(address);
+    if (Object.keys(errors).length) {
+      setAddressErrors(errors);
+      return;
+    }
+    setAddressErrors({});
+    setStep(2);
+  };
+
   const getOrderPayload = (paymentMethod) => ({
     products: cart.map((item) => ({
       productId: item.productId,
@@ -152,6 +194,14 @@ const Checkout = () => {
     });
 
   const handlePlaceOrder = async () => {
+    const errors = validateAddress(address);
+    if (Object.keys(errors).length) {
+      setAddressErrors(errors);
+      setStep(1);
+      alert("Please fill all mandatory delivery address fields before placing the order.");
+      return;
+    }
+
     if (selectedPayment === "Cash on Delivery") {
       setPlacingOrder(true);
       try {
@@ -361,20 +411,26 @@ const Checkout = () => {
                         <input 
                           type="text" 
                           value={address.name}
-                          onChange={(e) => setAddress({...address, name: e.target.value})}
-                          className="w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm" 
+                          onChange={(e) => handleAddressChange("name", e.target.value)}
+                          required
+                          className={`w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm ${addressErrors.name ? "border-red-400" : ""}`}
                           placeholder="Name" 
                         />
+                        {addressErrors.name && <p className="text-red-600 text-xs mt-1">{addressErrors.name}</p>}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1 uppercase">10-digit mobile number</label>
                         <input 
                           type="text" 
                           value={address.phone}
-                          onChange={(e) => setAddress({...address, phone: e.target.value})}
-                          className="w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm" 
+                          onChange={(e) => handleAddressChange("phone", e.target.value)}
+                          required
+                          inputMode="numeric"
+                          maxLength={10}
+                          className={`w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm ${addressErrors.phone ? "border-red-400" : ""}`}
                           placeholder="Mobile Number" 
                         />
+                        {addressErrors.phone && <p className="text-red-600 text-xs mt-1">{addressErrors.phone}</p>}
                       </div>
                     </div>
 
@@ -384,20 +440,26 @@ const Checkout = () => {
                         <input 
                           type="text" 
                           value={address.pincode}
-                          onChange={(e) => setAddress({...address, pincode: e.target.value})}
-                          className="w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm" 
+                          onChange={(e) => handleAddressChange("pincode", e.target.value)}
+                          required
+                          inputMode="numeric"
+                          maxLength={6}
+                          className={`w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm ${addressErrors.pincode ? "border-red-400" : ""}`}
                           placeholder="Pincode" 
                         />
+                        {addressErrors.pincode && <p className="text-red-600 text-xs mt-1">{addressErrors.pincode}</p>}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1 uppercase">Locality</label>
                         <input 
                           type="text" 
                           value={address.locality}
-                          onChange={(e) => setAddress({...address, locality: e.target.value})}
-                          className="w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm" 
+                          onChange={(e) => handleAddressChange("locality", e.target.value)}
+                          required
+                          className={`w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm ${addressErrors.locality ? "border-red-400" : ""}`}
                           placeholder="Locality" 
                         />
+                        {addressErrors.locality && <p className="text-red-600 text-xs mt-1">{addressErrors.locality}</p>}
                       </div>
                     </div>
 
@@ -406,10 +468,12 @@ const Checkout = () => {
                       <textarea 
                         rows="3"
                         value={address.fullAddress}
-                        onChange={(e) => setAddress({...address, fullAddress: e.target.value})}
-                          className="w-full border p-3 rounded-xl focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm resize-none" 
+                        onChange={(e) => handleAddressChange("fullAddress", e.target.value)}
+                        required
+                          className={`w-full border p-3 rounded-xl focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm resize-none ${addressErrors.fullAddress ? "border-red-400" : ""}`}
                         placeholder="Address"
                       ></textarea>
+                      {addressErrors.fullAddress && <p className="text-red-600 text-xs mt-1">{addressErrors.fullAddress}</p>}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -418,27 +482,31 @@ const Checkout = () => {
                         <input 
                           type="text" 
                           value={address.city}
-                          onChange={(e) => setAddress({...address, city: e.target.value})}
-                          className="w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm" 
+                          onChange={(e) => handleAddressChange("city", e.target.value)}
+                          required
+                          className={`w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm ${addressErrors.city ? "border-red-400" : ""}`}
                           placeholder="City/District/Town" 
                         />
+                        {addressErrors.city && <p className="text-red-600 text-xs mt-1">{addressErrors.city}</p>}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1 uppercase">State</label>
                         <input 
                           type="text" 
                           value={address.state}
-                          onChange={(e) => setAddress({...address, state: e.target.value})}
-                          className="w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm" 
+                          onChange={(e) => handleAddressChange("state", e.target.value)}
+                          required
+                          className={`w-full border p-3 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm ${addressErrors.state ? "border-red-400" : ""}`}
                           placeholder="State" 
                         />
+                        {addressErrors.state && <p className="text-red-600 text-xs mt-1">{addressErrors.state}</p>}
                       </div>
                     </div>
 
                     <div className="pt-4 flex gap-4">
                       <button 
                         type="button"
-                        onClick={() => setStep(2)}
+                        onClick={handleContinueFromAddress}
                         className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-10 py-3 rounded-xl shadow font-bold text-sm uppercase tracking-wide transition active:translate-y-0.5"
                       >
                         Save and Deliver Here
